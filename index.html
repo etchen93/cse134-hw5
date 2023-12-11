@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethan Chen's Portfolio</title>
+  </head>
+  <noscript>
+    <a href="form-no-js.html">No JS Version</a>
+  </noscript>
+  <body>
+    <rating-widget></rating-widget>
+    <div><weather-widget></weather-widget></div>
+    <template id="rating-widget-template">
+      <div id="rating-widget-container">
+        <h2>Rating Widget</h2>
+        <form id="form-container">
+          <label for="rating">How satisfied are you?</label>
+          <input type="hidden" name="question" value="How satisfied are you?">
+          <input type="hidden" name="sentBy" value="JS">
+          <input type="hidden" id="rating" name="rating" value="0" required>
+          <div class="rating-container">
+            <span class="star" ratingValue="1">&#9733;</span>
+            <span class="star" ratingValue="2">&#9733;</span>
+            <span class="star" ratingValue="3">&#9733;</span>
+            <span class="star" ratingValue="4">&#9733;</span>
+            <span class="star" ratingValue="5">&#9733;</span>
+          </div>
+          <h4 id="ratingMessage"></h4>
+        </form>
+      </div>
+      <style>
+        #rating-widget-container {
+          background-color: rgb(245, 245, 245);
+          border: grey 1px;
+          display: inline-block;
+          padding: 1rem;
+          border-radius: .5rem;
+        }
+
+        .rating-container {
+          display: flex;
+          align-items: center;
+        }
+
+        .star {
+          font-size: 24px;
+          cursor: pointer;
+          transition: color 0.3s;
+        }
+
+        .star:hover {
+          color: gold;
+        }
+      </style>
+    </template>
+    <template id="weather-widget-template">
+      <div id="weather-widget-container">
+        <h2>Current Weather</h2>
+        <div id="weather-widget-data"></div>
+        <button id="submit">Find out Weather Right Now</button>
+      </div>
+
+      <style>
+        #weather-widget-container {
+          background-color: rgb(245, 245, 245);
+          border: grey 1px;
+          display: inline-block;
+          padding: 1rem;
+          border-radius: .5rem;
+        }
+
+        h2,h4 {
+          margin: 0;
+        }
+
+        section {
+          margin: 1rem;
+        }
+
+        section > div {
+          border: solid black 1px;
+          display: inline-block;
+          padding: 1rem;
+        }
+      </style>
+    </template>
+    <script>
+      class RatingWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          let template = document.getElementById('rating-widget-template');
+          let templateContent = template.content.cloneNode(true);
+          this.shadowRoot.appendChild(templateContent);
+
+          let starsRef = this.shadowRoot.querySelectorAll('.star');
+          this.totalScore = 0;
+
+          for (let i = 0; i < starsRef.length; i++) {
+            let star = starsRef[i];
+            star.addEventListener('mouseover', () => this.setStarColor(i+1));
+            star.addEventListener('mouseout', () => this.setStarColor(this.totalScore));
+            star.addEventListener('click', () => this.starClick(star));
+          }
+        }
+
+        setStarColor(value) {
+          const starsRef = this.shadowRoot.querySelectorAll('.star');
+          for (let i = 0; i < starsRef.length; i++) {
+            let star = starsRef[i];
+            let starValue = star.getAttribute('ratingValue');
+            star.style.color = starValue <= value ? 'gold' : 'gray';
+          }
+        }
+
+        async starClick(star) {
+          let value = star.getAttribute('ratingValue');
+          this.totalScore = value;
+
+          let ratingMessageRef = this.shadowRoot.getElementById('ratingMessage');
+          if (value / 5 < .8) {
+            ratingMessageRef.innerText = `Thank you for your feedback of ${value} stars. We'll try to do better`;
+          }
+          else {
+            ratingMessageRef.innerText = `Thanks for ${value} star rating!`;
+          }
+
+          this.shadowRoot.getElementById('rating').value = value;
+          this.setStarColor(value);
+          let formData = new FormData(this.shadowRoot.getElementById('form-container'));
+          let dataCopy = {
+            'question': formData.get('question'),
+            'sentBy': formData.get('sentBy'),
+            'rating': formData.get('rating')
+          };
+          try {
+            let response = await fetch('https://httpbin.org/post', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Sent-By': 'JS'
+              },
+              body: JSON.stringify(dataCopy)
+            })
+            console.log(response);
+          }
+          catch(e) {
+            console.error(e);
+          }
+        }
+      }
+      customElements.define('rating-widget', RatingWidget);
+
+      class WeatherWidget extends HTMLElement {
+        constructor() {
+          super();
+          this.attachShadow({ mode: 'open' });
+          let template = document.getElementById('weather-widget-template');
+          let templateContent = template.content.cloneNode(true);
+          this.shadowRoot.appendChild(templateContent);
+
+          let submitRef = this.shadowRoot.getElementById('submit');
+          submitRef.addEventListener('click', () => this.handleSubmit());
+        }
+
+        async handleSubmit() {
+          try {
+            let responseInfo = await fetch('https://api.weather.gov/points/32.8801,-117.234');
+            let dataInfo = await responseInfo.json();
+            let responseForecast = await fetch(dataInfo.properties.forecast);
+            let dataForecast = await responseForecast.json();
+            let early = dataForecast.properties.periods[0];
+            let late = dataForecast.properties.periods[1];
+            this.shadowRoot.getElementById('weather-widget-data').innerHTML = `
+              <section>
+                <h3>${early.name}</h3>
+                <p>
+                  &#127777;
+                  ${early.shortForecast}
+                  ${early.temperature}
+                  ${early.temperatureUnit}
+                </p>
+                <div>
+                  <h4>Extra Info</h4>
+                  <div>Probability of Precipitation: ${early.probabilityOfPrecipitation.value == null ? '0%' : `${early.probabilityOfPrecipitation.value}%`}</div>
+                  <div>Relative Humidity: ${early.relativeHumidity.value}</div>
+                  <div>Wind Direction: ${early.windDirection}</div>
+                  <div>Wind Speed: ${early.windSpeed}</div>
+                </div>
+              </section>
+              <section>
+                <h3>${late.name}</h3>
+                <p>
+                  &#127777;
+                  ${late.shortForecast}
+                  ${late.temperature}
+                  ${late.temperatureUnit}
+                </p>
+                <div>
+                  <h4>Extra Info</h4>
+                  <div>Probability of Precipitation: ${late.probabilityOfPrecipitation.value == null ? '0%' : `${late.probabilityOfPrecipitation.value}%`}</div>
+                  <div>Relative Humidity: ${late.relativeHumidity.value}</div>
+                  <div>Wind Direction: ${late.windDirection}</div>
+                  <div>Wind Speed: ${late.windSpeed}</div>
+                </div>
+              </section>
+            `;
+          }
+          catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      customElements.define('weather-widget', WeatherWidget);
+    </script>
+  </body>
+</html>
