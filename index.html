@@ -6,17 +6,19 @@
     <title>Ethan Chen's Portfolio</title>
   </head>
   <body>
-    <rating-widget></rating-widget>
+    <rating-widget>
+      <h2>Rating Widget</h2>
+      <form action="https://httpbin.org/post" method="POST">
+        <label for="rating">How satisfied are you?</label>
+        <input type="hidden" name="question" value="How satisfied are you?">
+        <input type="hidden" name="sentBy" value="HTML">
+        <input type="number" id="rating" name="rating" min="1" max="5" value="0" required>
+        <button type="submit">Submit</button>
+      </form>
+    </rating-widget>
     <div>
       <weather-widget>
-        <h2>Rating Widget</h2>
-        <form action="https://httpbin.org/post" method="POST">
-          <label for="rating">How satisfied are you?</label>
-          <input type="hidden" name="question" value="How satisfied are you?">
-          <input type="hidden" name="sentBy" value="HTML">
-          <input type="number" id="rating" name="rating" min="1" max="5" value="0" required>
-          <button type="submit">Submit</button>
-        </form>
+        <h2>Weather Not Available</h2>
       </weather-widget>
     </div>
     <template id="rating-widget-template">
